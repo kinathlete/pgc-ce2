@@ -98,6 +98,14 @@ def get_sim_dc_pue(reg_pd):
 
     return sim_dc_pue.item()
 
+# GET TOTAL E ANNUALISED
+def get_total_e_annualised(full_e_pd):
+    days_in_dataset = full_e_pd['day'].nunique()
+    total_co2_e = full_e_pd['co2_e'].sum()
+    annualised_co2_e = (total_co2_e/days_in_dataset*365).round(decimals=2)
+
+    return annualised_co2_e
+
 # BUILD DATA CENTER REPLACE SCENARIO DF
 def build_filtered_sim_1_pd(cu_pd, replaced_dc, replacing_dc, reg_pd):
     fil_sim_1_cu_pd = cu_pd.copy()
@@ -121,8 +129,9 @@ def build_filtered_sim_2_pd(cu_pd, improved_dc, sim_pue, reg_pd):
 # APP INTRO
 st.title("PGC - Cloud Emissions Estimator")
 st.header("Powered by Exivity & Claudy | Crafted with Streamlit")
-st.write("The estimate is derived from cloud-usage-based power consumption, region-based data center efficiency and carbon intensity.\
-    Real-world power consumption provided by Exivity, data center efficiency and carbon intensity researched and final app engineered by Claudy.")
+st.write("The estimate is derived from cloud-usage-based power consumption, region-based data center efficiency \
+    and carbon intensity. Real-world power consumption provided by Exivity, data center efficiency and carbon \
+        intensity researched and final app engineered by Claudy.")
 with st.expander("Find out more about our approach - click here"):
     st.write("more info soon.")
 
@@ -171,14 +180,18 @@ with st.container():
     st.markdown("_Importable via Exivity API | BETA: loaded from CSV_")
     col11, col12, col13, col14 = st.columns(4)
     with col11:
-        st.metric(label="Services Used", value=filtered_em_pd['instance_value'].count(),help="Service = distinct server instance used from the AWS Elastic Compute Cloud library")
+        st.metric(label="Services Used", value=filtered_em_pd['instance_value'].count(),\
+            help="Service = distinct server instance used from the AWS Elastic Compute Cloud library")
     with col12:
-        st.metric(label="Products Serviced", value=filtered_em_pd['service_id'].nunique(),help="Product = a distinct product/project for which a cloud resource is utilised")
+        st.metric(label="Products Serviced", value=filtered_em_pd['service_id'].nunique(),\
+            help="Product = a distinct product/project for which a cloud resource is utilised")
     with col13:
-        st.metric(label="Data Centers", value=filtered_em_pd['data_center'].nunique(),help="Data Center = a distinct building stacked with servers (in aws, a data center is \
+        st.metric(label="Data Centers", value=filtered_em_pd['data_center'].nunique(),\
+            help="Data Center = a distinct building stacked with servers (in aws, a data center is \
             determind by the last character in the location name, such as eu-central-1a<--)")
     with col14:
-        st.metric(label="Duration", value="{} days".format(filtered_em_pd['day'].nunique()),help="= number of available days in the loaded dataset")
+        st.metric(label="Duration", value="{} days".format(filtered_em_pd['day'].nunique()),\
+            help="= number of available days in the loaded dataset")
     with st.expander("Click here to visit the input data."):
         st.markdown("**CLOUD USAGE DATA (EXIVITY)**")
         st.dataframe(data=filtered_em_pd, use_container_width=True)
@@ -189,12 +202,12 @@ with st.container():
     st.subheader("ACME's Cloud Carbon Footprint")
     col21, col22 = st.columns([1,3])
     with col21:
-        st.metric("CO2 in tons", "{}t".format(filtered_em_pd['co2_e'].sum().round(decimals=2)),\
-            help="This shows your overall carbon emissions in tons based on the select cloud usage data.")
+        st.metric("CO2 tons", "{}t".format(filtered_em_pd['co2_e'].sum().round(decimals=2)),\
+            help="This shows your overall carbon emissions in tons based on the loaded cloud usage data.")
         st.metric("Current price per ton", "{}€".format(co2t_price),\
             help="This shows the official EU Carbon Permit price per CO2 metric ton as per FEB 13 2023.")
-        st.metric("Offset cost total", "{}€".format(filtered_em_pd['co2_e'].sum().round(decimals=2)*co2t_price),\
-            help="This shows your total cost to offset your current carbon emissions at the current price per CO2 ton.")
+        st.metric("Offset cost annualised", "{}€".format((get_total_e_annualised(filtered_em_pd)*co2t_price).round(decimals=2),\
+            help="This shows the total expected cost to offset your annualised carbon emissions at the latest price per CO2 ton."))
     with col22:
         param_total_e_chart_dim = st.selectbox(label="Drill-down dimension",options=filter_dimensions,\
     help="Select a dimension to drill-down emissions over time in the chart below",)
@@ -213,9 +226,11 @@ with st.container():
         st.metric("CO2 Emissions", "{}t".format(filtered_em_pd['co2_e'].sum().round(decimals=2)))
         st.write('')
         st.write("CO2 by Account")
-        st.bar_chart(data=build_agg_e_by_dim(filtered_em_pd, 'account_name', 'sum'), x="account_name", y="co2_e", use_container_width=True)
+        st.bar_chart(data=build_agg_e_by_dim(filtered_em_pd, 'account_name', 'sum'), x="account_name", \
+            y="co2_e", use_container_width=True)
         st.write("CO2 by Region")
-        st.bar_chart(data=build_agg_e_by_dim(filtered_em_pd, 'region', 'sum'), x="region", y="co2_e", use_container_width=True)
+        st.bar_chart(data=build_agg_e_by_dim(filtered_em_pd, 'region', 'sum'), x="region", \
+            y="co2_e", use_container_width=True)
 
     with col32:
         st.subheader("Scenario 1")
@@ -223,9 +238,11 @@ with st.container():
             st.metric("CO2 Emissions", "{}t".format(sim_1_pd['co2_e'].sum().round(decimals=2)),(sim_1_pd['co2_e'].sum()\
                 -filtered_em_pd['co2_e'].sum()).round(decimals=2),'inverse')
             st.write("CO2 by Account")
-            st.bar_chart(data=build_agg_e_by_dim(sim_1_pd, 'account_name', 'sum'), x="account_name", y="co2_e", use_container_width=True)
+            st.bar_chart(data=build_agg_e_by_dim(sim_1_pd, 'account_name', 'sum'), x="account_name", \
+                y="co2_e", use_container_width=True)
             st.write("CO2 by Region")
-            st.bar_chart(data=build_agg_e_by_dim(sim_1_pd, 'region', 'sum'), x="region", y="co2_e", use_container_width=True)
+            st.bar_chart(data=build_agg_e_by_dim(sim_1_pd, 'region', 'sum'), x="region", \
+                y="co2_e", use_container_width=True)
 
     with col33:
         st.subheader("Scenario 2")
@@ -233,6 +250,8 @@ with st.container():
             st.metric("CO2 Emissions", "{}t".format(sim_2_pd['co2_e'].sum().round(decimals=2)),(sim_2_pd['co2_e'].sum()\
                 -filtered_em_pd['co2_e'].sum()).round(decimals=2),'inverse')
             st.write("CO2 by Account")
-            st.bar_chart(data=build_agg_e_by_dim(sim_2_pd, 'account_name', 'sum'), x="account_name", y="co2_e", use_container_width=True)
+            st.bar_chart(data=build_agg_e_by_dim(sim_2_pd, 'account_name', 'sum'), x="account_name", \
+                y="co2_e", use_container_width=True)
             st.write("CO2 by Region")
-            st.bar_chart(data=build_agg_e_by_dim(sim_2_pd, 'region', 'sum'), x="region", y="co2_e", use_container_width=True)
+            st.bar_chart(data=build_agg_e_by_dim(sim_2_pd, 'region', 'sum'), x="region", \
+                y="co2_e", use_container_width=True)
