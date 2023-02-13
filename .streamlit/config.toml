@@ -1,0 +1,9 @@
+[theme] # You have to add this line
+
+primaryColor = '#190933' # Russian Violet
+
+backgroundColor = '#5DD9C1' # Turquoise
+
+secondaryBackgroundColor = '#ACFCD9' # Aquamarine
+
+textColor = '#414141'
