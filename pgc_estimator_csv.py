@@ -194,7 +194,7 @@ with st.container():
             help="= number of available days in the loaded dataset")
     with st.expander("Click here to visit the input data."):
         st.markdown("**CLOUD USAGE DATA (EXIVITY)**")
-        st.dataframe(data=filtered_em_pd, use_container_width=True)
+        st.dataframe(data=raw_cu_pd, use_container_width=True)
         st.markdown("**REGIONS DATA (CLAUDY)** - limited to AWS.")
         st.dataframe(data=raw_reg_pd, use_container_width=True)
 
@@ -224,34 +224,17 @@ with st.container():
     with col31:
         st.subheader("Current State")
         st.metric("CO2 Emissions", "{}t".format(filtered_em_pd['co2_e'].sum().round(decimals=2)))
-        st.write('')
-        st.write("CO2 by Account")
-        st.bar_chart(data=build_agg_e_by_dim(filtered_em_pd, 'account_name', 'sum'), x="account_name", \
-            y="co2_e", use_container_width=True)
-        st.write("CO2 by Region")
-        st.bar_chart(data=build_agg_e_by_dim(filtered_em_pd, 'region', 'sum'), x="region", \
-            y="co2_e", use_container_width=True)
 
     with col32:
         st.subheader("Scenario 1")
         if sim_run_button:
             st.metric("CO2 Emissions", "{}t".format(sim_1_pd['co2_e'].sum().round(decimals=2)),(sim_1_pd['co2_e'].sum()\
                 -filtered_em_pd['co2_e'].sum()).round(decimals=2),'inverse')
-            st.write("CO2 by Account")
-            st.bar_chart(data=build_agg_e_by_dim(sim_1_pd, 'account_name', 'sum'), x="account_name", \
-                y="co2_e", use_container_width=True)
-            st.write("CO2 by Region")
-            st.bar_chart(data=build_agg_e_by_dim(sim_1_pd, 'region', 'sum'), x="region", \
-                y="co2_e", use_container_width=True)
 
     with col33:
         st.subheader("Scenario 2")
         if sim_run_button:
             st.metric("CO2 Emissions", "{}t".format(sim_2_pd['co2_e'].sum().round(decimals=2)),(sim_2_pd['co2_e'].sum()\
                 -filtered_em_pd['co2_e'].sum()).round(decimals=2),'inverse')
-            st.write("CO2 by Account")
-            st.bar_chart(data=build_agg_e_by_dim(sim_2_pd, 'account_name', 'sum'), x="account_name", \
-                y="co2_e", use_container_width=True)
-            st.write("CO2 by Region")
-            st.bar_chart(data=build_agg_e_by_dim(sim_2_pd, 'region', 'sum'), x="region", \
-                y="co2_e", use_container_width=True)
+
+    st.markdown("**There will be a waterfall chart showing the impact of your scenarios here soon.**")
