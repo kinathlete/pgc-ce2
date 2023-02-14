@@ -1,9 +1,7 @@
 [theme] # You have to add this line
 
-primaryColor = '#190933' # Russian Violet
+primaryColor = '#32292F' # Raisin Black
 
-backgroundColor = '#ACFCD9' # Aquamarine
+backgroundColor = '#FFFFFF' # Mint Cream
 
-secondaryBackgroundColor = '#5DD9C1' # Turquoise
-
-textColor = '#414141'
+secondaryBackgroundColor = '#B7D1DA' # Tiffany Blue
