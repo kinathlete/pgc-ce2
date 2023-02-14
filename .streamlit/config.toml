@@ -1,7 +1,7 @@
 [theme] # You have to add this line
 
-primaryColor = '#32292F' # Raisin Black
+primaryColor = '#4E5340' # Ebony
 
-backgroundColor = '#FFFFFF' # Mint Cream
+backgroundColor = '#FFFFFF' # White
 
-secondaryBackgroundColor = '#B7D1DA' # Tiffany Blue
+secondaryBackgroundColor = '#B7D1DA' # Columbia Blue
