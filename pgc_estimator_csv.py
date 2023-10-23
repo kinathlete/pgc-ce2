@@ -62,9 +62,9 @@ def build_clean_cu_pd(raw_pd):
     # FILTER AWS ROWS
     subset_pd = subset_pd[subset_pd['service_key'].str.contains("BoxUsage")]
     # EXTRACT REGION INTO SEPARATE COLUMN
-    subset_pd['data_center'] = subset_pd['service_key'].str.split(' ', 1).str[-1]
+    subset_pd['data_center'] = subset_pd['service_key'].str.split(' ', n=1).str[-1]
     subset_pd['data_center'] = "aws-" + subset_pd['data_center'].astype(str)
-    subset_pd['region'] = subset_pd['service_key'].str.split(' ', 1).str[-1].str[:-1]
+    subset_pd['region'] = subset_pd['service_key'].str.split(' ', n=1).str[-1].str[:-1]
     subset_pd['region'] = "aws-" + subset_pd['region'].astype(str)
     
     return subset_pd
@@ -129,9 +129,9 @@ def build_filtered_sim_2_pd(cu_pd, improved_dc, sim_pue, reg_pd):
 # APP INTRO
 st.title("PGC - Cloud Emissions Estimator")
 st.header("Powered by Exivity & Claudy | Crafted with Streamlit")
-st.write("The estimate is derived from cloud-usage-based power consumption, region-based data center efficiency \
-    and carbon intensity. Real-world power consumption provided by Exivity, data center efficiency and carbon \
-        intensity researched and final app engineered by Claudy.")
+st.write("The estimate is calculated as the product of power consumption, data center efficiency \
+    and carbon intensity. The real-world multi-cloud usage data and power consumption is provided by Exivity,\
+        data center efficiency and carbon intensity factors are researched and final app is engineered by Claudy.")
 with st.expander("Find out more about our approach - click here"):
     st.write("more info soon.")
 
@@ -157,14 +157,14 @@ st.sidebar.text('')
 st.sidebar.subheader('SCENARIOS')
 ### SCENARIO SETTER 1 ###
 st.sidebar.markdown("**Set your scenario 1:** :point_down:")
-sim_replaced_dc = st.sidebar.selectbox(label="Data center region to be replaced",options=filtered_em_pd['region'].unique(),\
+sim_replaced_dc = st.sidebar.selectbox(label="Data center region to be replaced",options=sorted(filtered_em_pd['region'].unique()),\
     help="Select a data center that you would like to swap out with another data center",)
-sim_replacing_dc = st.sidebar.selectbox(label="Replacing data center region",options=raw_reg_pd["region"],\
+sim_replacing_dc = st.sidebar.selectbox(label="Replacing data center region",options=raw_reg_pd["region"].sort_values(ascending=True),\
     help="Select a data center that you would like to replace the above selected data center with",)
 st.sidebar.text('')
 ### SCENARIO SETTER 2 ###
 st.sidebar.markdown("**Set your scenario 2:** :point_down:")
-sim_improved_dc = st.sidebar.selectbox(label="Data center to be improved",options=filtered_em_pd['region'].unique(),\
+sim_improved_dc = st.sidebar.selectbox(label="Data center to be improved",options=sorted(filtered_em_pd['region'].unique()),\
     help="Select a data center where you would like to simulate a PUE factor improvement",)
 sim_pue = st.sidebar.slider(label="Set a target PUE", min_value=1.01, max_value=1.99, value=get_sim_dc_pue(raw_reg_pd),\
     step=0.01, help="Select the PUE that you want to simulate with")
@@ -206,35 +206,45 @@ with st.container():
             help="This shows your overall carbon emissions in tons based on the loaded cloud usage data.")
         st.metric("Current price per ton", "{}€".format(co2t_price),\
             help="This shows the official EU Carbon Permit price per CO2 metric ton as per FEB 13 2023.")
-        st.metric("Offset cost annualised", "{}€".format((get_total_e_annualised(filtered_em_pd)*co2t_price).round(decimals=2),\
-            help="This shows the total expected cost to offset your annualised carbon emissions at the latest price per CO2 ton."))
+        st.metric("Offset cost", "{}€".format((filtered_em_pd['co2_e'].sum()*co2t_price).round(decimals=2)),\
+            help="This shows the total expected cost to offset your YTD carbon emissions at the latest price per CO2 ton.")
     with col22:
         param_total_e_chart_dim = st.selectbox(label="Drill-down dimension",options=filter_dimensions,\
     help="Select a dimension to drill-down emissions over time in the chart below",)
         total_e_barchart = alt.Chart(build_agg_e_by_mult_dims(filtered_em_pd, (param_total_e_chart_dim,), 'sum'))\
-            .mark_bar().encode(
-                x='day',
-                y='co2_e',
+            .mark_bar(opacity=0.4).encode(
+                x=alt.X('day', axis=alt.Axis(title='Date')),
+                y=alt.Y('co2_e', axis=alt.Axis(title='CO2 tons')),
                 color=param_total_e_chart_dim
             )
-        st.altair_chart(total_e_barchart, use_container_width=True, theme="streamlit")
+        mean_line = alt.Chart(build_agg_e_by_mult_dims(filtered_em_pd, (param_total_e_chart_dim,), 'sum'))\
+            .mark_rule(color='black').encode(
+                y='mean(co2_e)'
+            )
+        st.altair_chart(total_e_barchart + mean_line, use_container_width=True, theme="streamlit")
 
 with st.container():
     col31, col32, col33 = st.columns(3)
     with col31:
         st.subheader("Current State")
-        st.metric("CO2 Emissions", "{}t".format(filtered_em_pd['co2_e'].sum().round(decimals=2)))
+        st.metric("CO2 tons annualised", "{}t".format(get_total_e_annualised(filtered_em_pd).round(decimals=2)))
+        st.write("")
+        st.metric("Offset cost annualised", "{}€".format((get_total_e_annualised(filtered_em_pd)*co2t_price).round(decimals=2)))
 
     with col32:
         st.subheader("Scenario 1")
         if sim_run_button:
-            st.metric("CO2 Emissions", "{}t".format(sim_1_pd['co2_e'].sum().round(decimals=2)),(sim_1_pd['co2_e'].sum()\
-                -filtered_em_pd['co2_e'].sum()).round(decimals=2),'inverse')
+            st.metric("CO2 tons annualised", "{}t".format(get_total_e_annualised(sim_1_pd).round(decimals=2)),\
+                (get_total_e_annualised(sim_1_pd)-get_total_e_annualised(filtered_em_pd)).round(decimals=2),'inverse')
+            st.metric("Offset cost annualised", "{}€".format((get_total_e_annualised(sim_1_pd)*co2t_price).round(decimals=2)),\
+                ((get_total_e_annualised(sim_1_pd)*co2t_price)-get_total_e_annualised(filtered_em_pd)*co2t_price).round(decimals=2),'inverse')
 
     with col33:
         st.subheader("Scenario 2")
         if sim_run_button:
-            st.metric("CO2 Emissions", "{}t".format(sim_2_pd['co2_e'].sum().round(decimals=2)),(sim_2_pd['co2_e'].sum()\
-                -filtered_em_pd['co2_e'].sum()).round(decimals=2),'inverse')
+            st.metric("CO2 tons annualised", "{}t".format(get_total_e_annualised(sim_2_pd).round(decimals=2)),\
+                (get_total_e_annualised(sim_2_pd)-get_total_e_annualised(filtered_em_pd)).round(decimals=2),'inverse')
+            st.metric("Offset cost annualised", "{}€".format((get_total_e_annualised(sim_2_pd)*co2t_price).round(decimals=2)),\
+                ((get_total_e_annualised(sim_2_pd)*co2t_price)-get_total_e_annualised(filtered_em_pd)*co2t_price).round(decimals=2),'inverse')
 
     st.markdown("**There will be a waterfall chart showing the impact of your scenarios here soon.**")
